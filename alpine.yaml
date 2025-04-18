@@ -1,0 +1,41 @@
+package:
+  name: alpine
+  version: 6.12.23
+  epoch: 0
+  description: Melange spec for the fetch-kernel Make target
+  copyright:
+    - license: GPL-3.0-or-later
+
+environment:
+  contents:
+    packages:
+      - build-base
+      - busybox
+      - curl
+
+pipeline:
+  - if: ${{build.arch}} == "aarch64"
+    uses: fetch
+    with:
+      expected-sha256: 30891e4a37967187f48da323d81cbe7c06bb9f600ec0c666f2df48feb50813ba
+      uri: https://dl-cdn.alpinelinux.org/alpine/edge/main/${{build.arch}}/linux-virt-${{package.version}}-r${{package.epoch}}.apk
+
+  - if: ${{build.arch}} == "x86_64"
+    uses: fetch
+    with:
+      expected-sha256: bcfa2eedd1d18c74abcf8c0315adb470b4ca972b0879d047c64eccf7fd0e1b93
+      uri: https://dl-cdn.alpinelinux.org/alpine/edge/main/${{build.arch}}/linux-virt-${{package.version}}-r${{package.epoch}}.apk
+
+  - runs: |
+      mkdir -p ${{targets.contextdir}}/opt/kernel
+      tar -xf ./linux-virt-${{package.version}}-r${{package.epoch}}.apk -C  ${{targets.contextdir}}/opt/kernel/ 2>/dev/null
+
+update:
+  manual: true
+
+test:
+  pipeline:
+    - runs: |
+        set -x
+        ls -hal /opt/kernel/boot/vmlinuz-virt
+        ls -hal /opt/kernel/lib/modules/
