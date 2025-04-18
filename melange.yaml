@@ -17,6 +17,10 @@ environment:
       - ca-certificates-bundle
       - go
 
+vars:
+  microvm-kernel-version: 6.12.23
+  microvm-kernel-epoch: "0"
+
 pipeline:
   - uses: git-checkout
     with:
@@ -63,6 +67,37 @@ subpackages:
              ${{targets.subpkgdir}}/var/cache \
              ${{targets.subpkgdir}}/var/run
           ln -sf /usr/share/zoneinfo/UTC  ${{targets.subpkgdir}}/etc/localtime
+
+  - name: melange-microvm-kernel
+    description: Minimal Alpine kernel for microvm workloads
+    dependencies:
+      runtime:
+        - curl
+    pipeline:
+      - if: ${{build.arch}} == "aarch64"
+        uses: fetch
+        with:
+          expected-sha256: 30891e4a37967187f48da323d81cbe7c06bb9f600ec0c666f2df48feb50813ba
+          uri: https://dl-cdn.alpinelinux.org/alpine/edge/main/${{build.arch}}/linux-virt-${{vars.microvm-kernel-version}}-r${{vars.microvm-kernel-epoch}}.apk
+      - if: ${{build.arch}} == "x86_64"
+        uses: fetch
+        with:
+          expected-sha256: bcfa2eedd1d18c74abcf8c0315adb470b4ca972b0879d047c64eccf7fd0e1b93
+          uri: https://dl-cdn.alpinelinux.org/alpine/edge/main/${{build.arch}}/linux-virt-${{vars.microvm-kernel-version}}-r${{vars.microvm-kernel-epoch}}.apk
+      - runs: |
+          mkdir -p ${{targets.contextdir}}/var/kernel
+          tar -xf ./linux-virt-${{vars.microvm-kernel-version}}-r${{vars.microvm-kernel-epoch}}.apk -C  ${{targets.contextdir}}/var/kernel/ 2>/dev/null
+    test:
+      environment:
+        contents:
+          packages:
+            - busybox
+            - coreutils
+      pipeline:
+        - runs: |
+            set -x
+            ls -hal /var/kernel/lib/modules
+            ls -hal /var/kernel/boot/vmlinuz-virt
 
 update:
   enabled: true
